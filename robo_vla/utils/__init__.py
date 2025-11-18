@@ -4,6 +4,7 @@ from robo_vla.utils.config import load_config, save_config
 from robo_vla.utils.logging import setup_logging, get_logger
 from robo_vla.utils.memory import GPUMemoryManager
 from robo_vla.utils.optimization import optimize_model, quantize_model
+from robo_vla.utils.optimizations import ProjectOptimizations, training_config_for_rtx3060
 from robo_vla.utils.visualization import visualize_point_cloud, plot_trajectory
 
 __all__ = [
@@ -14,6 +15,8 @@ __all__ = [
     "GPUMemoryManager",
     "optimize_model",
     "quantize_model",
+    "ProjectOptimizations",
+    "training_config_for_rtx3060",
     "visualize_point_cloud",
     "plot_trajectory",
 ]

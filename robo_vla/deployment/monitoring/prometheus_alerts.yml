@@ -1,0 +1,296 @@
+groups:
+  - name: vla_inference_alerts
+    interval: 30s
+    rules:
+      - alert: HighInferenceLatency
+        expr: histogram_quantile(0.95, rate(vla_inference_duration_seconds_bucket[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: inference
+        annotations:
+          summary: "High inference latency detected"
+          description: "P95 inference latency is {{ $value }}s (threshold: 0.1s) for {{ $labels.model }}"
+          runbook_url: "https://docs.example.com/runbooks/high-latency"
+
+      - alert: CriticalInferenceLatency
+        expr: histogram_quantile(0.95, rate(vla_inference_duration_seconds_bucket[5m])) > 0.15
+        for: 2m
+        labels:
+          severity: critical
+          component: inference
+        annotations:
+          summary: "Critical inference latency"
+          description: "P95 inference latency is {{ $value }}s (threshold: 0.15s)"
+          action: "Scale up pods or investigate model performance"
+
+      - alert: LowSuccessRate
+        expr: rate(grasp_success_total[10m]) / rate(grasp_attempts_total[10m]) < 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: robotics
+        annotations:
+          summary: "Task success rate below threshold"
+          description: "Success rate is {{ $value | humanizePercentage }} (threshold: 80%)"
+          action: "Check robot calibration and environment conditions"
+
+      - alert: CriticalSuccessRate
+        expr: rate(grasp_success_total[10m]) / rate(grasp_attempts_total[10m]) < 0.6
+        for: 5m
+        labels:
+          severity: critical
+          component: robotics
+        annotations:
+          summary: "Critical task success rate"
+          description: "Success rate is {{ $value | humanizePercentage }} (threshold: 60%)"
+          action: "Stop robot operations and investigate immediately"
+
+      - alert: HighErrorRate
+        expr: rate(vla_inference_total{status="error"}[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors/sec (threshold: 1/sec)"
+          action: "Check logs for error patterns"
+
+      - alert: NoInferenceRequests
+        expr: rate(vla_inference_total[5m]) == 0
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "No inference requests received"
+          description: "No requests in the last 10 minutes"
+          action: "Check if clients are healthy and network is accessible"
+
+  - name: vla_gpu_alerts
+    interval: 30s
+    rules:
+      - alert: HighGPUUtilization
+        expr: vla_gpu_utilization_percent > 90
+        for: 5m
+        labels:
+          severity: warning
+          component: gpu
+        annotations:
+          summary: "High GPU utilization"
+          description: "GPU {{ $labels.device }} utilization is {{ $value }}% (threshold: 90%)"
+          action: "Consider scaling horizontally or optimizing model"
+
+      - alert: HighGPUMemoryUsage
+        expr: (nvidia_gpu_memory_used_bytes / nvidia_gpu_memory_total_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          component: gpu
+        annotations:
+          summary: "High GPU memory usage"
+          description: "GPU memory usage is {{ $value }}% (threshold: 90%)"
+          action: "Check for memory leaks or reduce batch size"
+
+      - alert: CriticalGPUMemoryUsage
+        expr: (nvidia_gpu_memory_used_bytes / nvidia_gpu_memory_total_bytes) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          component: gpu
+        annotations:
+          summary: "Critical GPU memory usage"
+          description: "GPU memory usage is {{ $value }}% (threshold: 95%)"
+          action: "Immediate action required - risk of OOM errors"
+
+      - alert: GPUTemperatureHigh
+        expr: nvidia_gpu_temperature_celsius > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: gpu
+        annotations:
+          summary: "High GPU temperature"
+          description: "GPU temperature is {{ $value }}°C (threshold: 80°C)"
+          action: "Check cooling system"
+
+  - name: vla_system_alerts
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{pod=~"vla-server.*"}[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% for pod {{ $labels.pod }}"
+          action: "Scale horizontally or optimize CPU-bound operations"
+
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes{pod=~"vla-server.*"} / container_spec_memory_limit_bytes{pod=~"vla-server.*"}) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% for pod {{ $labels.pod }}"
+          action: "Check for memory leaks"
+
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total{pod=~"vla-server.*"}[15m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          component: kubernetes
+        annotations:
+          summary: "Pod is crash looping"
+          description: "Pod {{ $labels.pod }} is restarting"
+          action: "Check pod logs immediately"
+
+      - alert: PodNotReady
+        expr: kube_pod_status_phase{pod=~"vla-server.*", phase!="Running"} > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: kubernetes
+        annotations:
+          summary: "Pod not ready"
+          description: "Pod {{ $labels.pod }} is in {{ $labels.phase }} state"
+          action: "Investigate pod status and events"
+
+  - name: vla_performance_alerts
+    interval: 1m
+    rules:
+      - alert: SlowPerceptionModule
+        expr: histogram_quantile(0.95, rate(vla_inference_duration_seconds_bucket{operation="perception"}[5m])) > 0.06
+        for: 5m
+        labels:
+          severity: warning
+          component: perception
+        annotations:
+          summary: "Slow perception module"
+          description: "Perception latency is {{ $value }}s (threshold: 0.06s)"
+          action: "Check DINO/MiDaS model optimization"
+
+      - alert: SlowLanguageModule
+        expr: histogram_quantile(0.95, rate(vla_inference_duration_seconds_bucket{operation="language"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: language
+        annotations:
+          summary: "Slow language module"
+          description: "Language processing latency is {{ $value }}s (threshold: 0.05s)"
+          action: "Check Llama model quantization and batching"
+
+      - alert: HighActionGenerationTime
+        expr: histogram_quantile(0.95, rate(vla_inference_duration_seconds_bucket{operation="action"}[5m])) > 0.015
+        for: 5m
+        labels:
+          severity: warning
+          component: action
+        annotations:
+          summary: "High action generation time"
+          description: "Action generation latency is {{ $value }}s (threshold: 0.015s)"
+          action: "Check VLA model optimization"
+
+  - name: vla_business_alerts
+    interval: 5m
+    rules:
+      - alert: LowThroughput
+        expr: rate(vla_inference_total{status="success"}[5m]) < 10
+        for: 15m
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "Low inference throughput"
+          description: "Throughput is {{ $value }} req/s (threshold: 10 req/s)"
+          action: "Check load balancer and client health"
+
+      - alert: HighP99Latency
+        expr: histogram_quantile(0.99, rate(vla_inference_duration_seconds_bucket[5m])) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          component: sla
+        annotations:
+          summary: "P99 latency SLA violation"
+          description: "P99 latency is {{ $value }}s (SLA: 0.2s)"
+          action: "Investigate tail latency issues"
+
+      - alert: LowDailySuccessRate
+        expr: sum(increase(grasp_success_total[24h])) / sum(increase(grasp_attempts_total[24h])) < 0.85
+        for: 1h
+        labels:
+          severity: info
+          component: business
+        annotations:
+          summary: "Daily success rate below target"
+          description: "24h success rate is {{ $value | humanizePercentage }} (target: 85%)"
+          action: "Review daily operations and failure patterns"
+
+  - name: vla_data_alerts
+    interval: 2m
+    rules:
+      - alert: KnowledgeGraphUnavailable
+        expr: up{job="neo4j"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: knowledge
+        annotations:
+          summary: "Neo4j knowledge graph unavailable"
+          description: "Neo4j instance is down"
+          action: "Restart Neo4j service immediately"
+
+      - alert: VectorStoreUnavailable
+        expr: up{job="chromadb"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          component: knowledge
+        annotations:
+          summary: "ChromaDB vector store unavailable"
+          description: "ChromaDB instance is down"
+          action: "Restart ChromaDB service"
+
+      - alert: HighDatabaseLatency
+        expr: histogram_quantile(0.95, rate(neo4j_query_duration_seconds_bucket[5m])) > 0.02
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High database query latency"
+          description: "Neo4j P95 query latency is {{ $value }}s (threshold: 0.02s)"
+          action: "Check database indexes and query optimization"
+
+  - name: vla_security_alerts
+    interval: 1m
+    rules:
+      - alert: UnauthorizedAccessAttempts
+        expr: rate(http_requests_total{status="401"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "High number of unauthorized access attempts"
+          description: "{{ $value }} unauthorized attempts per second"
+          action: "Check authentication logs and possible attack"
+
+      - alert: TooManyServerErrors
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 10
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High number of server errors"
+          description: "{{ $value }} 5xx errors per second"
+          action: "Check application logs and server health"

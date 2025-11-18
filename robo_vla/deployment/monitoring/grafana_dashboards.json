@@ -1,0 +1,470 @@
+{
+  "dashboard": {
+    "title": "RoboVLA Production Monitoring",
+    "tags": ["robotics", "vla", "production"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Inference Rate (Requests/Second)",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(vla_inference_total[1m])",
+            "legendFormat": "{{model}} - {{status}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "reqps",
+            "label": "Requests/sec"
+          }
+        ],
+        "alert": {
+          "name": "Low Inference Rate",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [10],
+                "type": "lt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "1m",
+          "handler": 1,
+          "message": "Inference rate dropped below 10 req/s",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 2,
+        "title": "Inference Latency P95",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(vla_inference_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95 Latency",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(vla_inference_duration_seconds_bucket[5m]))",
+            "legendFormat": "P99 Latency",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(vla_inference_duration_seconds_bucket[5m]))",
+            "legendFormat": "P50 Latency",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "ms",
+            "label": "Latency"
+          }
+        ],
+        "alert": {
+          "name": "High Latency",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [100],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "message": "P95 latency exceeded 100ms for 5 minutes"
+        }
+      },
+      {
+        "id": 3,
+        "title": "GPU Utilization",
+        "type": "gauge",
+        "gridPos": {
+          "x": 0,
+          "y": 8,
+          "w": 6,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "vla_gpu_utilization_percent",
+            "legendFormat": "GPU {{device}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 70
+                },
+                {
+                  "color": "red",
+                  "value": 90
+                }
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        },
+        "alert": {
+          "name": "High GPU Utilization",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [90],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "message": "GPU utilization above 90% for 5 minutes"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Task Success Rate",
+        "type": "stat",
+        "gridPos": {
+          "x": 6,
+          "y": 8,
+          "w": 6,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "rate(grasp_success_total[1h]) / rate(grasp_attempts_total[1h])",
+            "legendFormat": "Success Rate",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.7
+                },
+                {
+                  "color": "green",
+                  "value": 0.85
+                }
+              ]
+            },
+            "unit": "percentunit"
+          }
+        },
+        "alert": {
+          "name": "Low Success Rate",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.7],
+                "type": "lt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "10m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "message": "Task success rate below 70% for 10 minutes"
+        }
+      },
+      {
+        "id": 5,
+        "title": "GPU Memory Usage",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 8,
+          "w": 12,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "nvidia_gpu_memory_used_bytes / nvidia_gpu_memory_total_bytes * 100",
+            "legendFormat": "GPU {{device}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "Memory Usage %",
+            "max": 100,
+            "min": 0
+          }
+        ],
+        "alert": {
+          "name": "High GPU Memory Usage",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [90],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "message": "GPU memory usage above 90% for 5 minutes"
+        }
+      },
+      {
+        "id": 6,
+        "title": "Active Pods",
+        "type": "stat",
+        "gridPos": {
+          "x": 0,
+          "y": 14,
+          "w": 4,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "count(kube_pod_info{namespace=\"default\", pod=~\"vla-server.*\"})",
+            "legendFormat": "Active Pods",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "CPU Usage by Pod",
+        "type": "graph",
+        "gridPos": {
+          "x": 4,
+          "y": 14,
+          "w": 10,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{pod=~\"vla-server.*\"}[5m]) * 100",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "CPU %"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Error Rate",
+        "type": "graph",
+        "gridPos": {
+          "x": 14,
+          "y": 14,
+          "w": 10,
+          "h": 6
+        },
+        "targets": [
+          {
+            "expr": "rate(vla_inference_total{status=\"error\"}[5m])",
+            "legendFormat": "Errors/sec",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "reqps",
+            "label": "Error Rate"
+          }
+        ],
+        "alert": {
+          "name": "High Error Rate",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [1],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "message": "Error rate above 1 req/s for 5 minutes"
+        }
+      },
+      {
+        "id": 9,
+        "title": "Component Latency Breakdown",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 20,
+          "w": 24,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(vla_inference_duration_seconds_bucket{operation=\"perception\"}[5m])) * 1000",
+            "legendFormat": "Perception P95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(vla_inference_duration_seconds_bucket{operation=\"language\"}[5m])) * 1000",
+            "legendFormat": "Language P95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(vla_inference_duration_seconds_bucket{operation=\"fusion\"}[5m])) * 1000",
+            "legendFormat": "Fusion P95",
+            "refId": "C"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(vla_inference_duration_seconds_bucket{operation=\"action\"}[5m])) * 1000",
+            "legendFormat": "Action P95",
+            "refId": "D"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "ms",
+            "label": "Latency (ms)"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Recent Error Logs",
+        "type": "logs",
+        "gridPos": {
+          "x": 0,
+          "y": 28,
+          "w": 24,
+          "h": 10
+        },
+        "targets": [
+          {
+            "expr": "{job=\"vla-server\"} |= \"ERROR\"",
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "namespace",
+          "type": "query",
+          "query": "label_values(kube_pod_info, namespace)",
+          "current": {
+            "text": "default",
+            "value": "default"
+          }
+        },
+        {
+          "name": "pod",
+          "type": "query",
+          "query": "label_values(kube_pod_info{namespace=\"$namespace\"}, pod)",
+          "multi": true
+        }
+      ]
+    }
+  }
+}
